@@ -1,0 +1,27 @@
+services:
+  app:
+    image: node:22-bookworm-slim
+    restart: on-failure
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - freight_data:/data
+    env_file:
+      - /run/base44/app.env
+    environment:
+      NODE_ENV: development
+      DB_PATH: /data/freight.sqlite
+      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: ${__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS:-}
+    command: ["sh", "-ec", "npm ci --no-audit --no-fund && exec npm run dev"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "Promise.all([fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)throw Error('Frontend failed')}),fetch('http://127.0.0.1:3001/api/posts').then(r=>{if(!r.ok)throw Error('Backend failed')})]).catch(e=>{console.error(e.message);process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+volumes:
+  node_modules:
+  freight_data:

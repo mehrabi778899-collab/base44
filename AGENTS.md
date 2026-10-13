@@ -1,0 +1,12 @@
+# Development notes
+
+- Run `docker compose -f docker-compose.base44.yml up -d`. A single Node 22 development container runs the API on 3001 and Vite on 3000. The API is only exposed through Vite's same-origin `/api` proxy. The source is bind-mounted and both processes watch for changes.
+- The startup command runs `npm ci` against the checked-in lockfile, with dependencies in a named volume. Do not install both processes concurrently into this volume.
+- Node's built-in SQLite implementation requires Node 22 or later. Its experimental warning on Node 22 is expected. Schema creation and seed data are idempotent on startup; no migration or seed job is needed. Application records live in the `freight_data` volume at `/data/freight.sqlite`; never remove this volume to refresh source or dependencies.
+- `ADMIN_PASSWORD` comes from `/run/base44/app.env`, not the repo. The generated development secret unblocks boot. The user must replace it in Secrets with their chosen strong password to sign in as `admin` at `/admin`. Never display this environment value. Use the secure dashboard instead of passing passwords in chat.
+- All mutation requests require `X-App-Request: garmnoor`; the shared frontend `api()` helper includes it. Auth uses random, hashed, expiring session tokens in SQLite and HTTP-only same-origin cookies. Admin and user sessions are separate cookies (`garmnoor_admin`, `garmnoor_user`).
+- The app is a Persian RTL e-commerce store ("گرم‌نور") for handmade candles, warmers, and vaseline. Color palette is defined as CSS variables in `src/styles.css`: `--cream: #FFF9E8`, `--white: #FFFFFF`, `--text: #1E2A44`, `--text-sec: #55607A`, `--orange: #F5862F`, `--blue: #7891CB`, `--navy: #003964`. No colors outside this palette should be used.
+- `src/context.js` uses `React.createElement` (not JSX) because Vite requires `.jsx` extension for JSX files. Do not add JSX to this file.
+- User auth uses OTP (4-digit code). For development, the code is returned in the API response (`devCode`). In production, this should be replaced with actual SMS sending.
+- Payment is structured for Zarinpal (needs `zarinpalMerchantId` in settings) and card-to-card (with receipt upload as base64). The order is created with "pending" status; admin verifies payment.
+- Verify with `curl -f http://localhost:3000/`, `curl -f http://localhost:3000/api/products`, and `docker compose -f docker-compose.base44.yml ps`. The Compose healthcheck checks both components independently.
